@@ -23,7 +23,7 @@ func (b *Block) SetHash() {
 	b.Hash = hash[:]
 }
 
-// NewBlock creates and returns a new block
+// NewBlock creates and returns a block
 func NewBlock(data string, prevBlockHash []byte) *Block {
 	block := &Block{
 		Timestamp:     time.Now().Unix(),
@@ -33,4 +33,9 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 	}
 	block.SetHash()
 	return block
+}
+
+// NewBlock creates and returns a genesis block
+func NewGenesisBlock() *Block {
+	return NewBlock("Genesis Block", []byte{})
 }
