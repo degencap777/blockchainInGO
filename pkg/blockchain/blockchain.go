@@ -10,3 +10,10 @@ func (bc *Blockchain) AddBlock(data string) {
 	newBlock := NewBlock(data, prevBlockHash)
 	bc.blocks = append(bc.blocks, newBlock)
 }
+
+// NewBlockchain returns a blockchain with a genesis block
+func NewBlockchain() *Blockchain {
+	return &Blockchain{
+		blocks: []*Block{NewGenesisBlock()},
+	}
+}
