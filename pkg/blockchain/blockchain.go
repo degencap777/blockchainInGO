@@ -66,3 +66,11 @@ func NewBlockchain() *Blockchain {
 		db:  db,
 	}
 }
+
+// Iterator generates an iterator
+func (bc *Blockchain) Iterator() *BlockchainIterator {
+	return &BlockchainIterator{
+		currentHash: bc.tip,
+		db:          bc.db,
+	}
+}
