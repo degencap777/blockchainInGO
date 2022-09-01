@@ -50,14 +50,14 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {
 
 // Run performs a proof-of-work and returns nonce & hash
 func (pow *ProofOfWork) Run() (int, []byte) {
-	var hashInt *big.Int
+	var hashInt big.Int
 	var hash [32]byte
 	nonce := 0
 
 	fmt.Printf("Mining the block containing \"%s\"\n", pow.block.Data)
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
-		hash := sha256.Sum256(data)
+		hash = sha256.Sum256(data)
 		fmt.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
 
