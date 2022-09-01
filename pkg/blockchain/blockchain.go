@@ -1,4 +1,4 @@
-package main
+package blockchain
 
 import (
 	"github.com/boltdb/bolt"
@@ -73,4 +73,8 @@ func (bc *Blockchain) Iterator() *BlockchainIterator {
 		currentHash: bc.tip,
 		db:          bc.db,
 	}
+}
+
+func (bc *Blockchain) CloseDB() {
+	bc.db.Close()
 }
