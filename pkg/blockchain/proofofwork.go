@@ -14,7 +14,7 @@ var (
 	maxNonce = math.MaxInt64
 )
 
-const targetBits = 24
+const targetBits = 18
 
 type ProofOfWork struct {
 	block  *Block
@@ -32,6 +32,7 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 	}
 }
 
+// Helper function prepares block data to be hashed
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	data := bytes.Join(
 		[][]byte{
@@ -69,4 +70,17 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 
 	fmt.Printf("\n\n")
 	return nonce, hash[:]
+}
+
+// Validate validates a block's pow
+func (pow *ProofOfWork) Validate() bool {
+	var hashInt big.Int
+
+	data := pow.prepareData(pow.block.Nonce)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])
+
+	isValid := hashInt.Cmp(pow.target) == -1
+
+	return isValid
 }
