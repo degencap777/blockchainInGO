@@ -1,5 +1,7 @@
 <div id="top"></div>
 
+<!-- PROJECT LOGO -->
+<br />
 <div align="center">
   <a href="https://github.com/noodleslove/blockchain-go">
     <img src="assets/blockchain.jpg" alt="Logo" width="320" height="180">
