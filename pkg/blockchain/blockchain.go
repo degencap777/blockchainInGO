@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"fmt"
+
 	"github.com/boltdb/bolt"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
@@ -23,6 +25,7 @@ func (bc *Blockchain) AddBlock(data string) {
 
 		return nil
 	})
+	utils.Check(err)
 
 	newBlock := NewBlock(data, lastHash)
 
@@ -31,6 +34,7 @@ func (bc *Blockchain) AddBlock(data string) {
 		err := b.Put(newBlock.Hash, newBlock.Serialize())
 		utils.Check(err)
 		err = b.Put([]byte("l"), newBlock.Hash)
+		utils.Check(err)
 		bc.tip = newBlock.Hash
 
 		return nil
@@ -48,11 +52,14 @@ func NewBlockchain() *Blockchain {
 		b := tx.Bucket([]byte(blockBucket))
 
 		if b == nil {
+			fmt.Println("No existing blockchain found. Creating a new one...")
 			genesis := NewGenesisBlock()
 			b, err := tx.CreateBucket([]byte(blockBucket))
 			utils.Check(err)
 			err = b.Put(genesis.Hash, genesis.Serialize())
+			utils.Check(err)
 			err = b.Put([]byte("l"), genesis.Hash)
+			utils.Check(err)
 			tip = genesis.Hash
 		} else {
 			tip = b.Get([]byte("l"))
@@ -60,6 +67,7 @@ func NewBlockchain() *Blockchain {
 
 		return nil
 	})
+	utils.Check(err)
 
 	return &Blockchain{
 		tip: tip,
