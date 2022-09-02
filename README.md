@@ -1,7 +1,11 @@
 <div id="top"></div>
 
 <div align="center">
-  <h3 align="center">Building blockchain from scratch in Go</h3>
+  <a href="https://github.com/noodleslove/blockchain-go">
+    <img src="assets/blockchain.jpg" alt="Logo" width="320" height="180">
+  </a>
+
+  <h3 align="center">Building blockchain in Go</h3>
   <p align="center">A simplified blockchain implemented in Golang.</p>
 </div>
 
