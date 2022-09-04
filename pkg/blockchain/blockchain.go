@@ -19,7 +19,7 @@ type Blockchain struct {
 }
 
 // AddBlock saves the provided data as a block in the blockchain
-func (bc *Blockchain) AddBlock(data string) {
+func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 	var lastHash []byte
 
 	err := bc.db.View(func(tx *bolt.Tx) error {
@@ -30,7 +30,7 @@ func (bc *Blockchain) AddBlock(data string) {
 	})
 	utils.Check(err)
 
-	newBlock := NewBlock(data, lastHash)
+	newBlock := NewBlock(transactions, lastHash)
 
 	err = bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blockBucket))
