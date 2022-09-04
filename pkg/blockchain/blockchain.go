@@ -175,3 +175,19 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Tran
 
 	return unspentTXs
 }
+
+// FindUTXO finds and returns all unspent transaction outputs
+func (bc *Blockchain) FindUTXO(address string) []transaction.TXOutput {
+	var UTXOs []transaction.TXOutput
+	unspentTransactions := bc.FindUnspentTransactions(address)
+
+	for _, tx := range unspentTransactions {
+		for _, out := range tx.Vout {
+			if out.CanBeUnlockedWith(address) {
+				UTXOs = append(UTXOs, out)
+			}
+		}
+	}
+
+	return UTXOs
+}
