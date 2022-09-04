@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 
@@ -91,7 +92,7 @@ func CreateBlockchain(address string) *Blockchain {
 	utils.Check(err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		cbtx := transaction.NewCoinbaseTx(address, genesisData)
+		cbtx := transaction.NewCoinbaseTX(address, genesisData)
 		genesis := NewGenesisBlock(cbtx)
 		b, err := tx.CreateBucket([]byte(blockBucket))
 		utils.Check(err)
@@ -119,6 +120,58 @@ func (bc *Blockchain) Iterator() *BlockchainIterator {
 	}
 }
 
+// Helper function close blockchain db
 func (bc *Blockchain) CloseDB() {
 	bc.db.Close()
+}
+
+// FindUnspentTransactions returns a list of transactions containing unspent outputs
+func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Transaction {
+	var unspentTXs []transaction.Transaction
+	spentTXOs := make(map[string][]int)
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Transactions {
+			txID := hex.EncodeToString(tx.ID)
+
+		Outputs:
+			for outIdx, out := range tx.Vout {
+				// Check if an output was already referenced in an input
+				if spentTXOs[txID] != nil {
+					for _, spentOut := range spentTXOs[txID] {
+						if spentOut == outIdx {
+							continue Outputs
+						}
+					}
+				}
+
+				// If an output was locked by the same pubkey hash, this is the
+				// output we want
+				if out.CanBeUnlockedWith(address) {
+					unspentTXs = append(unspentTXs, *tx)
+				}
+			}
+
+			// After checking outputs we gather all inputs that could unlock
+			// outputs locked with the provided address (this doesn't apply to
+			// coinbase transactions, since they don't unlock outputs)
+			if !tx.IsCoinbase() {
+				for _, in := range tx.Vin {
+					if in.CanUnlockOutputWith(address) {
+						inTxID := hex.EncodeToString(in.Txid)
+						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
+					}
+				}
+			}
+		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return unspentTXs
 }
