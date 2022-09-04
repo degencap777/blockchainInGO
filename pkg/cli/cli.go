@@ -49,6 +49,9 @@ func (cli *CLI) Run() {
 	case "printchain":
 		err := printChainCmd.Parse(os.Args[2:])
 		utils.Check(err)
+	case "send":
+		err := sendCmd.Parse(os.Args[2:])
+		utils.Check(err)
 	default:
 		cli.printUsage()
 		os.Exit(1)
