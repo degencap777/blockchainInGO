@@ -18,7 +18,7 @@ type Transaction struct {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTx(to, data string) *Transaction {
+func NewCoinbaseTX(to, data string) *Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -52,4 +52,9 @@ func (tx *Transaction) SetID() {
 	utils.Check(err)
 	hash = sha256.Sum256(encoded.Bytes())
 	tx.ID = hash[:]
+}
+
+// IsCoinbase determines if a transaction is coinbase
+func (tx *Transaction) IsCoinbase() bool {
+	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
