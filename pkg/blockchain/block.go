@@ -5,22 +5,23 @@ import (
 	"encoding/gob"
 	"time"
 
+	tx "github.com/noodleslove/blockchain-go/pkg/transaction"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
 
 type Block struct {
 	Timestamp     int64
-	Data          []byte
+	Transactions  []*tx.Transaction
 	PrevBlockHash []byte
 	Hash          []byte
 	Nonce         int
 }
 
 // NewBlock creates and returns a block
-func NewBlock(data string, prevBlockHash []byte) *Block {
+func NewBlock(transactions []*tx.Transaction, prevBlockHash []byte) *Block {
 	block := &Block{
 		Timestamp:     time.Now().Unix(),
-		Data:          []byte(data),
+		Transactions:  transactions,
 		PrevBlockHash: prevBlockHash,
 		Hash:          []byte{},
 		Nonce:         0,
@@ -35,8 +36,8 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 }
 
 // NewBlock creates and returns a genesis block
-func NewGenesisBlock() *Block {
-	return NewBlock("Genesis Block", []byte{})
+func NewGenesisBlock(coinbase *tx.Transaction) *Block {
+	return NewBlock([]*tx.Transaction{coinbase}, []byte{})
 }
 
 // Serialize serializes a block
