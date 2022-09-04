@@ -23,7 +23,7 @@
 - [x] [Basic prototype](https://edwinho.online/blog/blockchain-in-go/part-1)
 - [x] [Proof-of-Work](https://edwinho.online/blog/blockchain-in-go/part-2)
 - [x] [Persistence & CLI](https://edwinho.online/blog/blockchain-in-go/part-3)
-- [ ] Transaction 1
+- [x] [Transaction 1](https://edwinho.online/blog/blockchain-in-go/part-4)
 - [ ] Addresses
 - [ ] Transaction 2
 - [ ] Network
