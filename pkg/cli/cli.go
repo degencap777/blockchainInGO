@@ -5,19 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/noodleslove/blockchain-go/pkg/blockchain"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
 
-type CLI struct {
-	bc *blockchain.Blockchain
-}
-
-func NewCLI(bc *blockchain.Blockchain) *CLI {
-	return &CLI{
-		bc: bc,
-	}
-}
+type CLI struct{}
 
 func (cli *CLI) validateArgs() {
 	if len(os.Args) < 2 {
