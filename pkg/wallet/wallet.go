@@ -8,7 +8,6 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
-	"golang.org/x/crypto/ripemd160"
 )
 
 const version = byte(0x00)
@@ -40,7 +39,7 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 
 // GetAddress returns wallet address
 func (w *Wallet) GetAddress() []byte {
-	pubKeyHash := HashPubKey(w.PublicKey)
+	pubKeyHash := utils.HashPubKey(w.PublicKey)
 
 	versionedPayload := append([]byte{version}, pubKeyHash...)
 	checksum := checksum(versionedPayload)
@@ -49,18 +48,6 @@ func (w *Wallet) GetAddress() []byte {
 	address := []byte(base58.Encode(fullPayload))
 
 	return address
-}
-
-// Helper function hashes public key
-func HashPubKey(pubKey []byte) []byte {
-	publicSHA256 := sha256.Sum256(pubKey)
-
-	RIPEMD160Hasher := ripemd160.New()
-	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
-	utils.Check(err)
-	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
-
-	return publicRIPEMD160
 }
 
 // Helper function calculates checksum
