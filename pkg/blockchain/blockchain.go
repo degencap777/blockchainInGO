@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/boltdb/bolt"
@@ -25,6 +26,12 @@ type Blockchain struct {
 // AddBlock saves the provided data as a block in the blockchain
 func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 	var lastHash []byte
+
+	for _, tx := range transactions {
+		if !bc.VerifyTransaction(tx) {
+			log.Panic("ERROR: Invalid transaction")
+		}
+	}
 
 	err := bc.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blockBucket))
