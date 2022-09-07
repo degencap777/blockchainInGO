@@ -35,8 +35,19 @@ func (ws *Wallets) CreateWallet() string {
 }
 
 // GetWallet returns a Wallet by its address
-func (ws Wallets) GetWallet(address string) Wallet {
+func (ws *Wallets) GetWallet(address string) Wallet {
 	return *ws.Wallets[address]
+}
+
+// GetAddresses returns an array of addresses stored in the wallet file
+func (ws *Wallets) GetAddresses() []string {
+	var addresses []string
+
+	for address := range ws.Wallets {
+		addresses = append(addresses, address)
+	}
+
+	return addresses
 }
 
 // LoadFromFile loads wallets from the file
