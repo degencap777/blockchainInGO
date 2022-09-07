@@ -2,6 +2,8 @@ package transaction
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
@@ -95,4 +97,80 @@ func NewUTXOTransaction(from, to string, amount int, bc blockchain) *Transaction
 	tx.SetID()
 
 	return &tx
+}
+
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
+	// Coinbase transactions are not signed because there are no real inputs in them.
+	if tx.IsCoinbase() {
+		return
+	}
+
+	// A trimmed copy will be signed, not a full transaction.
+	txCopy := tx.TrimmedCopy()
+
+	// Next, we iterate over each input in the copy.
+	for inID, vin := range txCopy.Vin {
+		// In each input, Signature is set to nil (just a double-check) and
+		// PubKey is set to the PubKeyHash of the referenced output.
+		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		txCopy.Vin[inID].Signature = nil
+		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+
+		// The Hash method serializes the transaction and hashes it with the
+		// SHA-256 algorithm. The resulted hash is the data we’re going to sign.
+		txCopy.ID = txCopy.Hash()
+
+		// After getting the hash we should reset the PubKey field, so it doesn’t
+		// affect further iterations.
+		txCopy.Vin[inID].PubKey = nil
+
+		// We sign txCopy.ID with privKey. An ECDSA signature is a pair of numbers,
+		// which we concatenate and store in the input’s Signature field.
+		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
+		utils.Check(err)
+		signature := append(r.Bytes(), s.Bytes()...)
+
+		tx.Vin[inID].Signature = signature
+	}
+}
+
+// TrimmedCopy creates a trimmed copy of Transaction to be used in signing
+func (tx *Transaction) TrimmedCopy() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for _, vin := range tx.Vin {
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, nil})
+	}
+
+	for _, vout := range tx.Vout {
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash})
+	}
+
+	txCopy := Transaction{tx.ID, inputs, outputs}
+
+	return txCopy
+}
+
+// Hash returns the hash of the Transaction
+func (tx *Transaction) Hash() []byte {
+	var hash [32]byte
+
+	txCopy := *tx
+	txCopy.ID = []byte{}
+
+	hash = sha256.Sum256(txCopy.Serialize())
+
+	return hash[:]
+}
+
+// Serialize returns a serialized Transaction
+func (tx *Transaction) Serialize() []byte {
+	var encoded bytes.Buffer
+
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(tx)
+	utils.Check(err)
+
+	return encoded.Bytes()
 }
