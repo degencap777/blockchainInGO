@@ -25,6 +25,15 @@ func NewWallets() (*Wallets, error) {
 	return &wallets, err
 }
 
+func (ws *Wallets) CreateWallet() string {
+	wallet := NewWallet()
+	address := string(wallet.GetAddress())
+
+	ws.Wallets[address] = wallet
+
+	return address
+}
+
 // GetWallet returns a Wallet by its address
 func (ws Wallets) GetWallet(address string) Wallet {
 	return *ws.Wallets[address]
