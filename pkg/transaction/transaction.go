@@ -13,6 +13,7 @@ import (
 	"math/big"
 
 	"github.com/noodleslove/blockchain-go/pkg/utils"
+	"github.com/noodleslove/blockchain-go/pkg/wallet"
 )
 
 const subsidy = 10
@@ -67,7 +68,11 @@ func NewUTXOTransaction(from, to string, amount int, bc blockchain) *Transaction
 	var inputs []TXInput
 	var outputs []TXOutput
 
-	acc, validOutputs := bc.FindSpendableOutputs(from, amount)
+	ws, err := wallet.NewWallets()
+	utils.Check(err)
+	w := ws.GetWallet(from)
+	pubKeyHash := utils.HashPubKey(w.PublicKey)
+	acc, validOutputs := bc.FindSpendableOutputs(pubKeyHash, amount)
 	if acc < amount {
 		log.Panic("ERROR: Not enough funds")
 	}
@@ -78,15 +83,15 @@ func NewUTXOTransaction(from, to string, amount int, bc blockchain) *Transaction
 		utils.Check(err)
 
 		for _, out := range outs {
-			input := TXInput{txID, out, from}
+			input := TXInput{txID, out, nil, w.PublicKey}
 			inputs = append(inputs, input)
 		}
 	}
 
 	// Build a list of outputs
-	outputs = append(outputs, TXOutput{amount, to})
+	outputs = append(outputs, *NewTXOutput(amount, to))
 	if acc > amount {
-		outputs = append(outputs, TXOutput{acc - amount, from}) // a change
+		outputs = append(outputs, *NewTXOutput(acc-amount, from)) // a change
 	}
 
 	tx := Transaction{

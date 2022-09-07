@@ -1,5 +1,8 @@
 package transaction
 
+import "crypto/ecdsa"
+
 type blockchain interface {
-	FindSpendableOutputs(address string, amount int) (int, map[string][]int)
+	FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int)
+	SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 }
