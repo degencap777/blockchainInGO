@@ -16,6 +16,10 @@ type Wallets struct {
 	Wallets map[string]*Wallet
 }
 
+type encodedWallets map[string][2][]byte
+
+type encodedWallet [2][]byte
+
 func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
 	wallets.Wallets = make(map[string]*Wallet)
@@ -86,8 +90,8 @@ func (ws *Wallets) SaveToFile() {
 	utils.Check(err)
 }
 
-func (ws *Wallets) Encode() map[string][2][]byte {
-	encodedWallets := make(map[string][2][]byte)
+func (ws *Wallets) Encode() encodedWallets {
+	encodedWallets := make(encodedWallets)
 
 	for addr, w := range ws.Wallets {
 		x509Encoded, _ := x509.MarshalECPrivateKey(&w.PrivateKey)
@@ -96,13 +100,13 @@ func (ws *Wallets) Encode() map[string][2][]byte {
 			Bytes: x509Encoded,
 		})
 
-		encodedWallets[addr] = [2][]byte{pemEncoded, w.PublicKey}
+		encodedWallets[addr] = encodedWallet{pemEncoded, w.PublicKey}
 	}
 
 	return encodedWallets
 }
 
-func (ws *Wallets) Decode(encodedWallets map[string][2][]byte) {
+func (ws *Wallets) Decode(encodedWallets encodedWallets) {
 	for addr, w := range encodedWallets {
 		encPriv, encPub := w[0], w[1]
 
