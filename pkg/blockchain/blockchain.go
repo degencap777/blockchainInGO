@@ -126,7 +126,7 @@ func (bc *Blockchain) CloseDB() {
 }
 
 // FindUnspentTransactions returns a list of transactions containing unspent outputs
-func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Transaction {
+func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []transaction.Transaction {
 	var unspentTXs []transaction.Transaction
 	spentTXOs := make(map[string][]int)
 	bci := bc.Iterator()
@@ -150,7 +150,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Tran
 
 				// If an output was locked by the same pubkey hash, this is the
 				// output we want
-				if out.CanBeUnlockedWith(address) {
+				if out.IsLockedWithKey(pubKeyHash) {
 					unspentTXs = append(unspentTXs, *tx)
 				}
 			}
@@ -160,7 +160,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Tran
 			// coinbase transactions, since they don't unlock outputs)
 			if !tx.IsCoinbase() {
 				for _, in := range tx.Vin {
-					if in.CanUnlockOutputWith(address) {
+					if in.UsesKey(pubKeyHash) {
 						inTxID := hex.EncodeToString(in.Txid)
 						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
 					}
@@ -177,13 +177,13 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Tran
 }
 
 // FindUTXO finds and returns all unspent transaction outputs
-func (bc *Blockchain) FindUTXO(address string) []transaction.TXOutput {
+func (bc *Blockchain) FindUTXO(pubKeyHash []byte) []transaction.TXOutput {
 	var UTXOs []transaction.TXOutput
-	unspentTransactions := bc.FindUnspentTransactions(address)
+	unspentTransactions := bc.FindUnspentTransactions(pubKeyHash)
 
 	for _, tx := range unspentTransactions {
 		for _, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address) {
+			if out.IsLockedWithKey(pubKeyHash) {
 				UTXOs = append(UTXOs, out)
 			}
 		}
@@ -193,11 +193,11 @@ func (bc *Blockchain) FindUTXO(address string) []transaction.TXOutput {
 }
 
 func (bc *Blockchain) FindSpendableOutputs(
-	address string,
+	pubKeyHash []byte,
 	amount int,
 ) (int, map[string][]int) {
 	unspentOutputs := make(map[string][]int)
-	unspentTXs := bc.FindUnspentTransactions(address)
+	unspentTXs := bc.FindUnspentTransactions(pubKeyHash)
 	accumulated := 0
 
 Outputs:
@@ -205,7 +205,7 @@ Outputs:
 		txID := hex.EncodeToString(tx.ID)
 
 		for outIdx, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address) && accumulated < amount {
+			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
 				accumulated += out.Value
 				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
 
