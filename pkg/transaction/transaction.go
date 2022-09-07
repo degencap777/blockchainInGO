@@ -3,12 +3,14 @@ package transaction
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math/big"
 
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
@@ -173,4 +175,47 @@ func (tx *Transaction) Serialize() []byte {
 	utils.Check(err)
 
 	return encoded.Bytes()
+}
+
+func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+	// First, we need the same transaction copy.
+	txCopy := tx.TrimmedCopy()
+	// Next, we’ll need the same curve that is used to generate key pairs.
+	curve := elliptic.P256()
+
+	// Next, we check signature in each input.
+	for inID, vin := range tx.Vin {
+		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		txCopy.Vin[inID].Signature = nil
+		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+		txCopy.ID = txCopy.Hash()
+		txCopy.Vin[inID].PubKey = nil
+
+		// Here we unpack values stored in TXInput.Signature and TXInput.PubKey,
+		// since a signature is a pair of numbers and a public key is a pair of
+		// coordinates. We concatenated them earlier for storing, and now we need
+		// to unpack them to use in crypto/ecdsa functions.
+		r := big.Int{}
+		s := big.Int{}
+		sigLen := len(vin.Signature)
+		r.SetBytes(vin.Signature[:(sigLen / 2)])
+		s.SetBytes(vin.Signature[(sigLen / 2):])
+
+		x := big.Int{}
+		y := big.Int{}
+		keyLen := len(vin.PubKey)
+		x.SetBytes(vin.PubKey[:(keyLen / 2)])
+		y.SetBytes(vin.PubKey[(keyLen / 2):])
+
+		// Here it is: we create an ecdsa.PublicKey using the public key extracted
+		// from the input and execute ecdsa.Verify passing the signature extracted
+		// from the input. If all inputs are verified, return true; if at least
+		// one input fails verification, return false.
+		rawPubKey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
+		if !ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) {
+			return false
+		}
+	}
+
+	return true
 }
