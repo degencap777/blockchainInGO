@@ -7,11 +7,9 @@ import (
 	"crypto/sha256"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/noodleslove/blockchain-go/internal"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
-
-const version = byte(0x00)
-const addressChecksumLen = 4
 
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
@@ -41,7 +39,7 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 func (w *Wallet) GetAddress() []byte {
 	pubKeyHash := utils.HashPubKey(w.PublicKey)
 
-	versionedPayload := append([]byte{version}, pubKeyHash...)
+	versionedPayload := append([]byte{internal.Version}, pubKeyHash...)
 	checksum := checksum(versionedPayload)
 
 	fullPayload := append(versionedPayload, checksum...)
@@ -55,5 +53,5 @@ func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
 	secondSHA := sha256.Sum256(firstSHA[:])
 
-	return secondSHA[:addressChecksumLen]
+	return secondSHA[:internal.AddressChecksumLen]
 }

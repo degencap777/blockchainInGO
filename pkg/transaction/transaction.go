@@ -12,11 +12,10 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/noodleslove/blockchain-go/internal"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 	"github.com/noodleslove/blockchain-go/pkg/wallet"
 )
-
-const subsidy = 10
 
 type Transaction struct {
 	ID   []byte
@@ -36,7 +35,7 @@ func NewCoinbaseTX(to, data string) *Transaction {
 		Signature: nil,
 		PubKey:    []byte(data),
 	}
-	txout := NewTXOutput(subsidy, to)
+	txout := NewTXOutput(internal.Subsidy, to)
 	tx := Transaction{
 		ID:   nil,
 		Vin:  []TXInput{txin},

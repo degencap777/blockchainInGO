@@ -10,13 +10,10 @@ import (
 	"os"
 
 	"github.com/boltdb/bolt"
+	"github.com/noodleslove/blockchain-go/internal"
 	"github.com/noodleslove/blockchain-go/pkg/transaction"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
-
-const dbFile = "blockchain.db"
-const blockBucket = "blocks"
-const genesisData = "Bitcoin was created in 2009 by a person or group of people using the pseudonym Satoshi Nakamoto"
 
 type Blockchain struct {
 	tip []byte
@@ -34,7 +31,7 @@ func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 	}
 
 	err := bc.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
+		b := tx.Bucket([]byte(internal.BlockBucket))
 		lastHash = b.Get([]byte("l"))
 
 		return nil
@@ -44,7 +41,7 @@ func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 	newBlock := NewBlock(transactions, lastHash)
 
 	err = bc.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
+		b := tx.Bucket([]byte(internal.BlockBucket))
 		err := b.Put(newBlock.Hash, newBlock.Serialize())
 		utils.Check(err)
 		err = b.Put([]byte("l"), newBlock.Hash)
@@ -58,7 +55,7 @@ func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 
 // Helper function check if blockchain db exists
 func dbExists() bool {
-	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+	if _, err := os.Stat(internal.DbFile); os.IsNotExist(err) {
 		return false
 	}
 
@@ -73,11 +70,11 @@ func NewBlockchain() *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(dbFile, 0600, nil)
+	db, err := bolt.Open(internal.DbFile, 0600, nil)
 	utils.Check(err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
+		b := tx.Bucket([]byte(internal.BlockBucket))
 		tip = b.Get([]byte("l"))
 
 		return nil
@@ -98,13 +95,13 @@ func CreateBlockchain(address string) *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(dbFile, 0600, nil)
+	db, err := bolt.Open(internal.DbFile, 0600, nil)
 	utils.Check(err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		cbtx := transaction.NewCoinbaseTX(address, genesisData)
+		cbtx := transaction.NewCoinbaseTX(address, internal.GenesisData)
 		genesis := NewGenesisBlock(cbtx)
-		b, err := tx.CreateBucket([]byte(blockBucket))
+		b, err := tx.CreateBucket([]byte(internal.BlockBucket))
 		utils.Check(err)
 		err = b.Put([]byte(genesis.Hash), genesis.Serialize())
 		utils.Check(err)

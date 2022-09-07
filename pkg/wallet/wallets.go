@@ -7,10 +7,9 @@ import (
 	"encoding/pem"
 	"os"
 
+	"github.com/noodleslove/blockchain-go/internal"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
-
-const walletFile = "wallets.dat"
 
 type Wallets struct {
 	Wallets map[string]*Wallet
@@ -56,11 +55,11 @@ func (ws *Wallets) GetAddresses() []string {
 
 // LoadFromFile loads wallets from the file
 func (ws *Wallets) LoadFromFile() error {
-	if _, err := os.Stat(walletFile); os.IsNotExist(err) {
+	if _, err := os.Stat(internal.WalletFile); os.IsNotExist(err) {
 		return err
 	}
 
-	fileContent, err := os.ReadFile(walletFile)
+	fileContent, err := os.ReadFile(internal.WalletFile)
 	if err != nil {
 		return err
 	}
@@ -86,7 +85,7 @@ func (ws *Wallets) SaveToFile() {
 	err := encoder.Encode(wallets)
 	utils.Check(err)
 
-	err = os.WriteFile(walletFile, content.Bytes(), 0644)
+	err = os.WriteFile(internal.WalletFile, content.Bytes(), 0644)
 	utils.Check(err)
 }
 
