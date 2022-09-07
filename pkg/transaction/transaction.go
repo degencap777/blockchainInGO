@@ -32,16 +32,14 @@ func NewCoinbaseTX(to, data string) *Transaction {
 	txin := TXInput{
 		Txid:      []byte{},
 		Vout:      -1,
-		ScriptSig: data,
+		Signature: nil,
+		PubKey:    []byte(data),
 	}
-	txout := TXOutput{
-		Value:        subsidy,
-		ScriptPubKey: to,
-	}
+	txout := NewTXOutput(subsidy, to)
 	tx := Transaction{
 		ID:   nil,
 		Vin:  []TXInput{txin},
-		Vout: []TXOutput{txout},
+		Vout: []TXOutput{*txout},
 	}
 	tx.SetID()
 
