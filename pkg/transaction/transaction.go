@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
 
 	"github.com/noodleslove/blockchain-go/internal"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
@@ -98,7 +99,8 @@ func NewUTXOTransaction(from, to string, amount int, bc blockchain) *Transaction
 		Vin:  inputs,
 		Vout: outputs,
 	}
-	tx.SetID()
+	tx.Hash()
+	bc.SignTransaction(&tx, w.PrivateKey)
 
 	return &tx
 }
@@ -177,6 +179,30 @@ func (tx *Transaction) Serialize() []byte {
 	utils.Check(err)
 
 	return encoded.Bytes()
+}
+
+// String returns a human-readable representation of a transaction
+func (tx Transaction) String() string {
+	var lines []string
+
+	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+
+	for i, input := range tx.Vin {
+
+		lines = append(lines, fmt.Sprintf("     Input %d:", i))
+		lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
+		lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
+		lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
+		lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
+	}
+
+	for i, output := range tx.Vout {
+		lines = append(lines, fmt.Sprintf("     Output %d:", i))
+		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
+		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
