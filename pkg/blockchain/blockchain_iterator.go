@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"github.com/boltdb/bolt"
+	"github.com/noodleslove/blockchain-go/internal"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
 
@@ -15,7 +16,7 @@ func (bci *BlockchainIterator) Next() *Block {
 	var block *Block
 
 	err := bci.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
+		b := tx.Bucket([]byte(internal.BlockBucket))
 		encodedBlock := b.Get([]byte(bci.currentHash))
 		block = DeserializeBlock(encodedBlock)
 

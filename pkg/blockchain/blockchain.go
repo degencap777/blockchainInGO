@@ -1,18 +1,19 @@
 package blockchain
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/boltdb/bolt"
+	"github.com/noodleslove/blockchain-go/internal"
 	"github.com/noodleslove/blockchain-go/pkg/transaction"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
-
-const dbFile = "blockchain.db"
-const blockBucket = "blocks"
-const genesisData = "Bitcoin was created in 2009 by a person or group of people using the pseudonym Satoshi Nakamoto"
 
 type Blockchain struct {
 	tip []byte
@@ -23,8 +24,14 @@ type Blockchain struct {
 func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 	var lastHash []byte
 
+	for _, tx := range transactions {
+		if !bc.VerifyTransaction(tx) {
+			log.Panic("ERROR: Invalid transaction")
+		}
+	}
+
 	err := bc.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
+		b := tx.Bucket([]byte(internal.BlockBucket))
 		lastHash = b.Get([]byte("l"))
 
 		return nil
@@ -34,7 +41,7 @@ func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 	newBlock := NewBlock(transactions, lastHash)
 
 	err = bc.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
+		b := tx.Bucket([]byte(internal.BlockBucket))
 		err := b.Put(newBlock.Hash, newBlock.Serialize())
 		utils.Check(err)
 		err = b.Put([]byte("l"), newBlock.Hash)
@@ -48,7 +55,7 @@ func (bc *Blockchain) MineBlock(transactions []*transaction.Transaction) {
 
 // Helper function check if blockchain db exists
 func dbExists() bool {
-	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+	if _, err := os.Stat(internal.DbFile); os.IsNotExist(err) {
 		return false
 	}
 
@@ -63,11 +70,11 @@ func NewBlockchain() *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(dbFile, 0600, nil)
+	db, err := bolt.Open(internal.DbFile, 0600, nil)
 	utils.Check(err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
+		b := tx.Bucket([]byte(internal.BlockBucket))
 		tip = b.Get([]byte("l"))
 
 		return nil
@@ -88,13 +95,13 @@ func CreateBlockchain(address string) *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(dbFile, 0600, nil)
+	db, err := bolt.Open(internal.DbFile, 0600, nil)
 	utils.Check(err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		cbtx := transaction.NewCoinbaseTX(address, genesisData)
+		cbtx := transaction.NewCoinbaseTX(address, internal.GenesisData)
 		genesis := NewGenesisBlock(cbtx)
-		b, err := tx.CreateBucket([]byte(blockBucket))
+		b, err := tx.CreateBucket([]byte(internal.BlockBucket))
 		utils.Check(err)
 		err = b.Put([]byte(genesis.Hash), genesis.Serialize())
 		utils.Check(err)
@@ -126,7 +133,7 @@ func (bc *Blockchain) CloseDB() {
 }
 
 // FindUnspentTransactions returns a list of transactions containing unspent outputs
-func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Transaction {
+func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []transaction.Transaction {
 	var unspentTXs []transaction.Transaction
 	spentTXOs := make(map[string][]int)
 	bci := bc.Iterator()
@@ -150,7 +157,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Tran
 
 				// If an output was locked by the same pubkey hash, this is the
 				// output we want
-				if out.CanBeUnlockedWith(address) {
+				if out.IsLockedWithKey(pubKeyHash) {
 					unspentTXs = append(unspentTXs, *tx)
 				}
 			}
@@ -160,7 +167,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Tran
 			// coinbase transactions, since they don't unlock outputs)
 			if !tx.IsCoinbase() {
 				for _, in := range tx.Vin {
-					if in.CanUnlockOutputWith(address) {
+					if in.UsesKey(pubKeyHash) {
 						inTxID := hex.EncodeToString(in.Txid)
 						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
 					}
@@ -177,13 +184,13 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transaction.Tran
 }
 
 // FindUTXO finds and returns all unspent transaction outputs
-func (bc *Blockchain) FindUTXO(address string) []transaction.TXOutput {
+func (bc *Blockchain) FindUTXO(pubKeyHash []byte) []transaction.TXOutput {
 	var UTXOs []transaction.TXOutput
-	unspentTransactions := bc.FindUnspentTransactions(address)
+	unspentTransactions := bc.FindUnspentTransactions(pubKeyHash)
 
 	for _, tx := range unspentTransactions {
 		for _, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address) {
+			if out.IsLockedWithKey(pubKeyHash) {
 				UTXOs = append(UTXOs, out)
 			}
 		}
@@ -193,11 +200,11 @@ func (bc *Blockchain) FindUTXO(address string) []transaction.TXOutput {
 }
 
 func (bc *Blockchain) FindSpendableOutputs(
-	address string,
+	pubKeyHash []byte,
 	amount int,
 ) (int, map[string][]int) {
 	unspentOutputs := make(map[string][]int)
-	unspentTXs := bc.FindUnspentTransactions(address)
+	unspentTXs := bc.FindUnspentTransactions(pubKeyHash)
 	accumulated := 0
 
 Outputs:
@@ -205,7 +212,7 @@ Outputs:
 		txID := hex.EncodeToString(tx.ID)
 
 		for outIdx, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address) && accumulated < amount {
+			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
 				accumulated += out.Value
 				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
 
@@ -217,4 +224,51 @@ Outputs:
 	}
 
 	return accumulated, unspentOutputs
+}
+
+func (bc *Blockchain) FindTransaction(ID []byte) (transaction.Transaction, error) {
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Transactions {
+			if bytes.Equal(tx.ID, ID) {
+				return *tx, nil
+			}
+		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return transaction.Transaction{}, errors.New("transaction not found")
+}
+
+func (bc *Blockchain) SignTransaction(
+	tx *transaction.Transaction,
+	privKey ecdsa.PrivateKey,
+) {
+	prevTXs := make(map[string]transaction.Transaction)
+
+	for _, vin := range tx.Vin {
+		prevTx, err := bc.FindTransaction(vin.Txid)
+		utils.Check(err)
+		prevTXs[hex.EncodeToString(prevTx.ID)] = prevTx
+	}
+
+	tx.Sign(privKey, prevTXs)
+}
+
+func (bc *Blockchain) VerifyTransaction(tx *transaction.Transaction) bool {
+	prevTXs := make(map[string]transaction.Transaction)
+
+	for _, vin := range tx.Vin {
+		prevTX, err := bc.FindTransaction(vin.Txid)
+		utils.Check(err)
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	}
+
+	return tx.Verify(prevTXs)
 }
