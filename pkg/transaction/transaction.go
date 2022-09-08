@@ -99,7 +99,8 @@ func NewUTXOTransaction(from, to string, amount int, bc blockchain) *Transaction
 		Vin:  inputs,
 		Vout: outputs,
 	}
-	tx.SetID()
+	tx.Hash()
+	bc.SignTransaction(&tx, w.PrivateKey)
 
 	return &tx
 }
