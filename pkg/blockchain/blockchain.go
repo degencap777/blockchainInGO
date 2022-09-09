@@ -262,6 +262,10 @@ func (bc *Blockchain) SignTransaction(
 }
 
 func (bc *Blockchain) VerifyTransaction(tx *transaction.Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
 	prevTXs := make(map[string]transaction.Transaction)
 
 	for _, vin := range tx.Vin {
