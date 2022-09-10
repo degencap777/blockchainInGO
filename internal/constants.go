@@ -20,7 +20,7 @@ const (
 	BlockBucket = "blocks"
 
 	// Blockchain bucket for utxo sets
-	UtxoBucket = "utxos"
+	UtxoBucket = "chainstate"
 
 	// Genesis data for genesis block
 	GenesisData = "Bitcoin was created in 2009 by a person or group of people using the pseudonym Satoshi Nakamoto"
