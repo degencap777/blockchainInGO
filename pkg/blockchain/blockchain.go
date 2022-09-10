@@ -227,33 +227,6 @@ func (bc *Blockchain) FindUTXO() map[string]transaction.TXOutputs {
 	return UTXO
 }
 
-func (bc *Blockchain) FindSpendableOutputs(
-	pubKeyHash []byte,
-	amount int,
-) (int, map[string][]int) {
-	unspentOutputs := make(map[string][]int)
-	unspentTXs := bc.FindUnspentTransactions(pubKeyHash)
-	accumulated := 0
-
-Outputs:
-	for _, tx := range unspentTXs {
-		txID := hex.EncodeToString(tx.ID)
-
-		for outIdx, out := range tx.Vout {
-			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
-				accumulated += out.Value
-				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
-
-				if accumulated >= amount {
-					break Outputs
-				}
-			}
-		}
-	}
-
-	return accumulated, unspentOutputs
-}
-
 func (bc *Blockchain) FindTransaction(ID []byte) (transaction.Transaction, error) {
 	bci := bc.Iterator()
 
