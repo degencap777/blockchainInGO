@@ -50,3 +50,13 @@ func (outs TXOutputs) Serialize() []byte {
 
 	return buff.Bytes()
 }
+
+func DeserializeOutputs(data []byte) TXOutputs {
+	var outputs TXOutputs
+
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	err := dec.Decode(&outputs)
+	utils.Check(err)
+
+	return outputs
+}
