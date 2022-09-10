@@ -74,3 +74,28 @@ func (u *UTXOSet) FindSpendableOutputs(
 	return accumlated, unspentOutputs
 
 }
+
+func (u *UTXOSet) FindUTXO(pubKeyHash []byte) []transaction.TXOutput {
+	var UTXOs []transaction.TXOutput
+	db := u.Blockchain.db
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(internal.UtxoBucket))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			outs := transaction.DeserializeOutputs(v)
+
+			for _, out := range outs.Outputs {
+				if out.IsLockedWithKey(pubKeyHash) {
+					UTXOs = append(UTXOs, out)
+				}
+			}
+		}
+
+		return nil
+	})
+	utils.Check(err)
+
+	return UTXOs
+}
