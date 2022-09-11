@@ -14,7 +14,7 @@ const (
 	Subsidy = 10
 
 	// Blockchain database filename
-	DbFile = "blockchain.db"
+	DbFile = "blockchain_%s.db"
 
 	// Blockchain bucket for blocks
 	BlockBucket = "blocks"
