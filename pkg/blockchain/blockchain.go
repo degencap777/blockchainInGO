@@ -301,3 +301,21 @@ func (bc *Blockchain) GetBestHeight() int {
 
 	return lastBlock.Height
 }
+
+// GetBlockHashes returns a list of hashes of all the blocks in the chain
+func (bc *Blockchain) GetBlockHashes() [][]byte {
+	var blocks [][]byte
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		blocks = append(blocks, block.Hash)
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return blocks
+}
