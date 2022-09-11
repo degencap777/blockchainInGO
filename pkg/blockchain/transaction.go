@@ -247,3 +247,14 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 
 	return true
 }
+
+// DeserializeTransaction deserializes a transaction
+func DeserializeTransaction(data []byte) Transaction {
+	var transaction Transaction
+
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	err := decoder.Decode(&transaction)
+	utils.Check(err)
+
+	return transaction
+}
