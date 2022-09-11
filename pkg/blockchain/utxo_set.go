@@ -12,15 +12,34 @@ type UTXOSet struct {
 	Blockchain *Blockchain
 }
 
+// CountTransactions returns the number of transactions in the UTXO set
+func (u *UTXOSet) CountTransactions() int {
+	db := u.Blockchain.db
+	counter := 0
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(internal.UtxoBucket))
+		c := b.Cursor()
+
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			counter++
+		}
+
+		return nil
+	})
+	utils.Check(err)
+
+	return counter
+}
+
 // Reindex rebuilds the UTXO set
 func (u UTXOSet) Reindex() {
 	db := u.Blockchain.db
 	bucketName := []byte(internal.UtxoBucket)
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		err := tx.DeleteBucket(bucketName)
-		utils.Check(err)
-		_, err = tx.CreateBucket(bucketName)
+		tx.DeleteBucket(bucketName)
+		_, err := tx.CreateBucket(bucketName)
 
 		return err
 	})
