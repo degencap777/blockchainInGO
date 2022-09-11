@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/noodleslove/blockchain-go/pkg/blockchain"
-	"github.com/noodleslove/blockchain-go/pkg/transaction"
 	"github.com/noodleslove/blockchain-go/pkg/wallet"
 )
 
@@ -18,12 +17,14 @@ func (cli *CLI) send(from, to string, amount int) {
 	}
 
 	bc := blockchain.NewBlockchain()
+	utxoSet := blockchain.UTXOSet{Blockchain: bc}
 	defer bc.CloseDB()
 
-	tx := transaction.NewUTXOTransaction(from, to, amount, bc)
-	cbTx := transaction.NewCoinbaseTX(from, "")
-	txs := []*transaction.Transaction{cbTx, tx}
+	tx := blockchain.NewUTXOTransaction(from, to, amount, utxoSet)
+	cbTx := blockchain.NewCoinbaseTX(from, "")
+	txs := []*blockchain.Transaction{cbTx, tx}
 
-	bc.MineBlock(txs)
+	newBlock := bc.MineBlock(txs)
+	utxoSet.Update(newBlock)
 	fmt.Println("Success!")
 }
