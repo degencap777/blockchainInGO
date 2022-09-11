@@ -2,10 +2,10 @@ package blockchain
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/gob"
 	"time"
 
+	"github.com/noodleslove/blockchain-go/pkg/merkletree"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
 
@@ -63,13 +63,12 @@ func DeserializeBlock(data []byte) *Block {
 }
 
 func (b *Block) HashTransactions() []byte {
-	var txHashes [][]byte
-	var txHash [32]byte
+	var transactions [][]byte
 
 	for _, tx := range b.Transactions {
-		txHashes = append(txHashes, tx.ID)
+		transactions = append(transactions, tx.Serialize())
 	}
-	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+	mTree := merkletree.NewMerkleTree(transactions)
 
-	return txHash[:]
+	return mTree.RootNode.Data
 }
