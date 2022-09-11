@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -54,4 +55,15 @@ func checksum(payload []byte) []byte {
 	secondSHA := sha256.Sum256(firstSHA[:])
 
 	return secondSHA[:internal.AddressChecksumLen]
+}
+
+// ValidateAddress check if address if valid
+func ValidateAddress(address string) bool {
+	pubKeyHash := base58.Decode(address)
+	actualChecksum := pubKeyHash[len(pubKeyHash)-internal.AddressChecksumLen:]
+	version := pubKeyHash[0]
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-internal.AddressChecksumLen]
+	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
+
+	return bytes.Equal(actualChecksum, targetChecksum)
 }
