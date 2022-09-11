@@ -5,7 +5,6 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/noodleslove/blockchain-go/internal"
-	"github.com/noodleslove/blockchain-go/pkg/transaction"
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
 
@@ -59,7 +58,7 @@ func (u *UTXOSet) FindSpendableOutputs(
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			txID := hex.EncodeToString(k)
-			outs := transaction.DeserializeOutputs(v)
+			outs := DeserializeOutputs(v)
 
 			for outIdx, out := range outs.Outputs {
 				if out.IsLockedWithKey(pubKeyHash) && accumlated < amount {
@@ -78,8 +77,8 @@ func (u *UTXOSet) FindSpendableOutputs(
 }
 
 // FindUTXO finds UTXO for a public key hash
-func (u *UTXOSet) FindUTXO(pubKeyHash []byte) []transaction.TXOutput {
-	var UTXOs []transaction.TXOutput
+func (u *UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
+	var UTXOs []TXOutput
 	db := u.Blockchain.db
 
 	err := db.View(func(tx *bolt.Tx) error {
@@ -87,7 +86,7 @@ func (u *UTXOSet) FindUTXO(pubKeyHash []byte) []transaction.TXOutput {
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			outs := transaction.DeserializeOutputs(v)
+			outs := DeserializeOutputs(v)
 
 			for _, out := range outs.Outputs {
 				if out.IsLockedWithKey(pubKeyHash) {
@@ -114,9 +113,9 @@ func (u *UTXOSet) Update(block *Block) {
 		for _, tx := range block.Transactions {
 			if !tx.IsCoinbase() {
 				for _, vin := range tx.Vin {
-					updateOuts := transaction.TXOutputs{}
+					updateOuts := TXOutputs{}
 					outsBytes := b.Get(vin.Txid)
-					outs := transaction.DeserializeOutputs(outsBytes)
+					outs := DeserializeOutputs(outsBytes)
 
 					// Put unspent outputs into updateOuts
 					for outIdx, out := range outs.Outputs {
@@ -138,10 +137,8 @@ func (u *UTXOSet) Update(block *Block) {
 			}
 
 			// Insert outputs of newly mined transactions
-			newOutputs := transaction.TXOutputs{}
-			for _, out := range tx.Vout {
-				newOutputs.Outputs = append(newOutputs.Outputs, out)
-			}
+			newOutputs := TXOutputs{}
+			newOutputs.Outputs = append(newOutputs.Outputs, tx.Vout...)
 
 			err := b.Put(tx.ID, newOutputs.Serialize())
 			utils.Check(err)
