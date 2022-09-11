@@ -60,6 +60,35 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 	return newBlock
 }
 
+// AddBlock saves the block into the blockchain
+func (bc *Blockchain) AddBlock(block *Block) {
+	err := bc.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(internal.BlockBucket))
+		blockInDb := b.Get(block.Hash)
+
+		if blockInDb != nil {
+			return nil
+		}
+
+		blockData := block.Serialize()
+		err := b.Put(block.Hash, blockData)
+		utils.Check(err)
+
+		lastHash := b.Get([]byte("l"))
+		lastBlockData := b.Get(lastHash)
+		lastBlock := DeserializeBlock(lastBlockData)
+
+		if block.Height > lastBlock.Height {
+			err = b.Put([]byte("l"), block.Hash)
+			utils.Check(err)
+			bc.tip = block.Hash
+		}
+
+		return nil
+	})
+	utils.Check(err)
+}
+
 // Helper function check if blockchain db exists
 func dbExists() bool {
 	if _, err := os.Stat(internal.DbFile); os.IsNotExist(err) {
@@ -318,4 +347,24 @@ func (bc *Blockchain) GetBlockHashes() [][]byte {
 	}
 
 	return blocks
+}
+
+// GetBlock finds a block by its hash and returns it
+func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
+	var block Block
+
+	err := bc.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(internal.BlockBucket))
+		blockData := b.Get(blockHash)
+
+		if blockData == nil {
+			return errors.New("block is not found")
+		}
+
+		block = *DeserializeBlock(blockData)
+
+		return nil
+	})
+
+	return block, err
 }
