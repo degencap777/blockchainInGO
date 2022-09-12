@@ -64,15 +64,13 @@ func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
-func NewUTXOTransaction(from, to string, amount int, utxoSet UTXOSet) *Transaction {
+func NewUTXOTransaction(wallet *wallet.Wallet, to string, amount int, utxoSet *UTXOSet) *Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
 
-	ws, err := wallet.NewWallets()
-	utils.Check(err)
-	w := ws.GetWallet(from)
-	pubKeyHash := utils.HashPubKey(w.PublicKey)
+	pubKeyHash := utils.HashPubKey(wallet.PublicKey)
 	acc, validOutputs := utxoSet.FindSpendableOutputs(pubKeyHash, amount)
+
 	if acc < amount {
 		log.Panic("ERROR: Not enough funds")
 	}
@@ -83,12 +81,13 @@ func NewUTXOTransaction(from, to string, amount int, utxoSet UTXOSet) *Transacti
 		utils.Check(err)
 
 		for _, out := range outs {
-			input := TXInput{txID, out, nil, w.PublicKey}
+			input := TXInput{txID, out, nil, wallet.PublicKey}
 			inputs = append(inputs, input)
 		}
 	}
 
 	// Build a list of outputs
+	from := string(wallet.GetAddress())
 	outputs = append(outputs, *NewTXOutput(amount, to))
 	if acc > amount {
 		outputs = append(outputs, *NewTXOutput(acc-amount, from)) // a change
@@ -100,7 +99,7 @@ func NewUTXOTransaction(from, to string, amount int, utxoSet UTXOSet) *Transacti
 		Vout: outputs,
 	}
 	tx.ID = tx.Hash()
-	utxoSet.Blockchain.SignTransaction(&tx, w.PrivateKey)
+	utxoSet.Blockchain.SignTransaction(&tx, wallet.PrivateKey)
 
 	return &tx
 }
@@ -109,6 +108,12 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 	// Coinbase transactions are not signed because there are no real inputs in them.
 	if tx.IsCoinbase() {
 		return
+	}
+
+	for _, vin := range tx.Vin {
+		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
+			log.Panic("ERROR: Previous transaction is not correct")
+		}
 	}
 
 	// A trimmed copy will be signed, not a full transaction.
@@ -122,21 +127,18 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		txCopy.Vin[inID].Signature = nil
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 
-		// The Hash method serializes the transaction and hashes it with the
-		// SHA-256 algorithm. The resulted hash is the data we’re going to sign.
-		txCopy.ID = txCopy.Hash()
-
-		// After getting the hash we should reset the PubKey field, so it doesn’t
-		// affect further iterations.
-		txCopy.Vin[inID].PubKey = nil
+		dataToSign := fmt.Sprintf("%x\n", txCopy)
 
 		// We sign txCopy.ID with privKey. An ECDSA signature is a pair of numbers,
 		// which we concatenate and store in the input’s Signature field.
-		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
+		r, s, err := ecdsa.Sign(rand.Reader, &privKey, []byte(dataToSign))
 		utils.Check(err)
 		signature := append(r.Bytes(), s.Bytes()...)
 
 		tx.Vin[inID].Signature = signature
+		// After getting the hash we should reset the PubKey field, so it doesn’t
+		// affect further iterations.
+		txCopy.Vin[inID].PubKey = nil
 	}
 }
 
@@ -206,6 +208,15 @@ func (tx Transaction) String() string {
 }
 
 func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	for _, vin := range tx.Vin {
+		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
+			log.Panic("ERROR: Previous transaction is not correct")
+		}
+	}
 	// First, we need the same transaction copy.
 	txCopy := tx.TrimmedCopy()
 	// Next, we’ll need the same curve that is used to generate key pairs.
@@ -216,8 +227,6 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
-		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = nil
 
 		// Here we unpack values stored in TXInput.Signature and TXInput.PubKey,
 		// since a signature is a pair of numbers and a public key is a pair of
@@ -235,14 +244,17 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		x.SetBytes(vin.PubKey[:(keyLen / 2)])
 		y.SetBytes(vin.PubKey[(keyLen / 2):])
 
+		dataToVerify := fmt.Sprintf("%x\n", txCopy)
+
 		// Here it is: we create an ecdsa.PublicKey using the public key extracted
 		// from the input and execute ecdsa.Verify passing the signature extracted
 		// from the input. If all inputs are verified, return true; if at least
 		// one input fails verification, return false.
 		rawPubKey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
-		if !ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) {
+		if !ecdsa.Verify(&rawPubKey, []byte(dataToVerify), &r, &s) {
 			return false
 		}
+		txCopy.Vin[inID].PubKey = nil
 	}
 
 	return true
