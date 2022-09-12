@@ -6,6 +6,7 @@ import (
 
 	"github.com/noodleslove/blockchain-go/pkg/blockchain"
 	"github.com/noodleslove/blockchain-go/pkg/network"
+	"github.com/noodleslove/blockchain-go/pkg/utils"
 	"github.com/noodleslove/blockchain-go/pkg/wallet"
 )
 
@@ -21,7 +22,11 @@ func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
 	utxoSet := blockchain.UTXOSet{Blockchain: bc}
 	defer bc.CloseDB()
 
-	tx := blockchain.NewUTXOTransaction(from, to, amount, utxoSet)
+	wallets, err := wallet.NewWallets(nodeID)
+	utils.Check(err)
+	wallet := wallets.GetWallet(from)
+
+	tx := blockchain.NewUTXOTransaction(&wallet, to, amount, &utxoSet)
 
 	if mineNow {
 		cbTx := blockchain.NewCoinbaseTX(from, "")
