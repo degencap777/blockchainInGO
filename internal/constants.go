@@ -8,7 +8,7 @@ const (
 	AddressChecksumLen = 4
 
 	// Wallet filename
-	WalletFile = "wallets.dat"
+	WalletFile = "wallet_%s.dat"
 
 	// Rewards to mining a new block
 	Subsidy = 10
