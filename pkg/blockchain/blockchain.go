@@ -14,6 +14,8 @@ import (
 	"github.com/noodleslove/blockchain-go/pkg/utils"
 )
 
+// const dbFile = "blockchain_%s.db"
+
 type Blockchain struct {
 	tip []byte
 	db  *bolt.DB
@@ -107,7 +109,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(internal.DbFile, 0600, nil)
+	db, err := bolt.Open(dbFile, 0600, nil)
 	utils.Check(err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
@@ -133,7 +135,7 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(internal.DbFile, 0600, nil)
+	db, err := bolt.Open(dbFile, 0600, nil)
 	utils.Check(err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
