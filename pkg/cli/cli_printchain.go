@@ -7,8 +7,8 @@ import (
 	"github.com/noodleslove/blockchain-go/pkg/blockchain"
 )
 
-func (cli *CLI) printChain() {
-	bc := blockchain.NewBlockchain()
+func (cli *CLI) printChain(nodeID string) {
+	bc := blockchain.NewBlockchain(nodeID)
 	defer bc.CloseDB()
 	bci := bc.Iterator()
 
