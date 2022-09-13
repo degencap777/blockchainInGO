@@ -70,5 +70,21 @@ func TestNewMerkleTree(t *testing.T) {
 	rootHash := fmt.Sprintf("%x", n7.Data)
 	mTree := NewMerkleTree(data)
 
-	assert.Equal(t, rootHash, fmt.Sprintf("%x", mTree.RootNode.Data), "Merkle tree root hash is correct")
+	assert.Equal(
+		t,
+		rootHash,
+		fmt.Sprintf("%x", mTree.RootNode.Data),
+		"Merkle tree root hash is correct",
+	)
+
+	// Identical tree
+	data = append(data, data[len(data)-1])
+	mTree2 := NewMerkleTree(data)
+
+	assert.Equal(
+		t,
+		hex.EncodeToString(mTree.RootNode.Data),
+		hex.EncodeToString(mTree2.RootNode.Data),
+		"Identical merkle tree root equal",
+	)
 }
