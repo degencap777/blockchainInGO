@@ -41,6 +41,8 @@ func handleBlock(request []byte, bc *blockchain.Blockchain) {
 	bc.AddBlock(block)
 
 	fmt.Printf("Added block %x\n", block.Hash)
+	// TODO: fix merkle root hash difference
+	fmt.Printf("Merkle Root: %x\n", block.HashTransactions())
 
 	if len(blocksInTransit) > 0 {
 		blockHash := blocksInTransit[0]
