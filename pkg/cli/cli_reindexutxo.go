@@ -6,8 +6,8 @@ import (
 	"github.com/noodleslove/blockchain-go/pkg/blockchain"
 )
 
-func (cli *CLI) reindexUTXO() {
-	bc := blockchain.NewBlockchain()
+func (cli *CLI) reindexUTXO(nodeID string) {
+	bc := blockchain.NewBlockchain(nodeID)
 	utxoSet := blockchain.UTXOSet{Blockchain: bc}
 	utxoSet.Reindex()
 	defer bc.CloseDB()

@@ -7,8 +7,8 @@ import (
 	"github.com/noodleslove/blockchain-go/pkg/wallet"
 )
 
-func (cli *CLI) listAddresses() {
-	wallets, err := wallet.NewWallets()
+func (cli *CLI) listAddresses(nodeID string) {
+	wallets, err := wallet.NewWallets(nodeID)
 	utils.Check(err)
 	addresses := wallets.GetAddresses()
 

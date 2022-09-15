@@ -10,12 +10,12 @@ import (
 	"github.com/noodleslove/blockchain-go/pkg/wallet"
 )
 
-func (cli *CLI) getBalance(address string) {
+func (cli *CLI) getBalance(address, nodeID string) {
 	if !wallet.ValidateAddress(address) {
 		log.Panic("ERROR: Address is not valid")
 	}
 
-	bc := blockchain.NewBlockchain()
+	bc := blockchain.NewBlockchain(nodeID)
 	utxoSet := blockchain.UTXOSet{Blockchain: bc}
 	defer bc.CloseDB()
 

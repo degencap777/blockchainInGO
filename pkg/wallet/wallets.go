@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"encoding/pem"
+	"fmt"
 	"os"
 
 	"github.com/noodleslove/blockchain-go/internal"
@@ -19,11 +20,11 @@ type encodedWallets map[string][2][]byte
 
 type encodedWallet [2][]byte
 
-func NewWallets() (*Wallets, error) {
+func NewWallets(nodeID string) (*Wallets, error) {
 	wallets := Wallets{}
 	wallets.Wallets = make(map[string]*Wallet)
 
-	err := wallets.LoadFromFile()
+	err := wallets.LoadFromFile(nodeID)
 
 	return &wallets, err
 }
@@ -54,12 +55,13 @@ func (ws *Wallets) GetAddresses() []string {
 }
 
 // LoadFromFile loads wallets from the file
-func (ws *Wallets) LoadFromFile() error {
-	if _, err := os.Stat(internal.WalletFile); os.IsNotExist(err) {
+func (ws *Wallets) LoadFromFile(nodeID string) error {
+	walletFile := fmt.Sprintf(internal.WalletFile, nodeID)
+	if _, err := os.Stat(walletFile); os.IsNotExist(err) {
 		return err
 	}
 
-	fileContent, err := os.ReadFile(internal.WalletFile)
+	fileContent, err := os.ReadFile(walletFile)
 	if err != nil {
 		return err
 	}
@@ -77,15 +79,16 @@ func (ws *Wallets) LoadFromFile() error {
 }
 
 // SaveToFile saves wallets to a file
-func (ws *Wallets) SaveToFile() {
+func (ws *Wallets) SaveToFile(nodeID string) {
 	var content bytes.Buffer
+	walletFile := fmt.Sprintf(internal.WalletFile, nodeID)
 
 	wallets := ws.Encode()
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(wallets)
 	utils.Check(err)
 
-	err = os.WriteFile(internal.WalletFile, content.Bytes(), 0644)
+	err = os.WriteFile(walletFile, content.Bytes(), 0644)
 	utils.Check(err)
 }
 

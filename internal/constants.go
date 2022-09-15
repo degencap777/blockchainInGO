@@ -8,13 +8,13 @@ const (
 	AddressChecksumLen = 4
 
 	// Wallet filename
-	WalletFile = "wallets.dat"
+	WalletFile = "wallet_%s.dat"
 
 	// Rewards to mining a new block
 	Subsidy = 10
 
 	// Blockchain database filename
-	DbFile = "blockchain.db"
+	DbFile = "blockchain_%s.db"
 
 	// Blockchain bucket for blocks
 	BlockBucket = "blocks"
